@@ -1,3 +1,4 @@
+import keras
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Input, Flatten, merge
@@ -7,8 +8,13 @@ from keras.layers.merge import Concatenate
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, Callback, EarlyStopping
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 batch_size = 32
+
+""" Augmentations """
 
 
 def gen_flow_for_two_inputs(X1, X2, y, gen):
@@ -21,6 +27,31 @@ def gen_flow_for_two_inputs(X1, X2, y, gen):
             #np.testing.assert_array_equal(X1i[0],X2i[0])
             yield [X1i[0], X2i[1]], X1i[1]
             
+
+def white_noise(X_train,X_angle_train,y_train, number_syn = 2):
+    
+    X_train_final = X_train.copy()
+    X_angle_train_final = X_angle_train.copy()
+    y_train_final = y_train.copy()
+    for syn in range(1,number_syn):
+        X_train_temp =  X_train.copy()
+        X_angle_train_temp = X_angle_train.copy()
+        y_train_temp = y_train.copy()
+        X_train_temp = [np.array([band * np.random.normal(1,np.std(band),size=(75,75)) for band in image.reshape(3,75,75)]).reshape(75,75,3) for image in  X_train_temp]
+        X_train_final = np.concatenate([X_train_final,X_train_temp])
+        X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
+        y_train_final = np.concatenate([y_train_final, y_train_temp])
+    
+    return X_train_final, X_angle_train_final, y_train_final
+        
+        
+        
+        
+        
+            
+
+
+""" Models """
 
 def keras_baselilne():
     
@@ -126,6 +157,51 @@ def resnet():
     optimizer = Adam(lr=0.001)
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
-            
+
+
+
+
+"""visualization function"""
+
+
+
+def true_positive(valid):
+    valid_positive = valid[valid['is_iceberg']==1]
+    valid_positive.sort_values('prediction',ascending=False,inplace=True)
+    x_band1 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band in valid_positive["band_1"]])
+    for i in range(5):
+        plt.imshow(np.array(x_band1[i]).astype(np.float32).reshape(75, 75)) 
+        plt.title(valid_positive.ix[valid_positive.index[i], 'prediction'])
+        plt.show()
+        
+def true_negetive(valid):
+    valid_negetive = valid[valid['is_iceberg']==0]
+    valid_negetive.sort_values('prediction',ascending=True,inplace=True)
+    x_band1 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band in valid_negetive["band_1"]])
+    for i in range(5):
+        plt.imshow(np.array(x_band1[i]).astype(np.float32).reshape(75, 75))
+        plt.title(valid_negetive.ix[valid_negetive.index[i], 'prediction'])
+        plt.show()
+        
+def false_negative(valid):
+    valid_positive = valid[valid['is_iceberg']==1]
+    valid_positive.sort_values('prediction',ascending=True,inplace=True)
+    x_band1 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band in valid_positive["band_1"]])
+    for i in range(5):
+        plt.imshow(np.array(x_band1[i]).astype(np.float32).reshape(75, 75)) 
+        plt.title(valid_positive.ix[valid_positive.index[i], 'prediction'])
+        plt.show()
+
+def false_positive(valid):
+    valid_negetive = valid[valid['is_iceberg']==0]
+    valid_negetive.sort_values('prediction',ascending=False,inplace=True)
+    x_band1 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band in valid_negetive["band_1"]])
+    for i in range(5):
+        plt.imshow(np.array(x_band1[i]).astype(np.float32).reshape(75, 75))
+        plt.title(valid_negetive.ix[valid_negetive.index[i], 'prediction'])
+        plt.show()
+        
+        
+
         
 
