@@ -37,12 +37,34 @@ def white_noise(X_train,X_angle_train,y_train, number_syn = 2):
         X_train_temp =  X_train.copy()
         X_angle_train_temp = X_angle_train.copy()
         y_train_temp = y_train.copy()
-        X_train_temp = [np.array([band * np.random.normal(1,np.std(band),size=(75,75)) for band in image.reshape(3,75,75)]).reshape(75,75,3) for image in  X_train_temp]
+        X_train_temp = [np.array([band * np.random.normal(1,np.std(band)/np.abs(np.mean(band)),size=(75,75)) for band in image.reshape(3,75,75)]).reshape(75,75,3) for image in  X_train_temp]
+        for image in X_train_temp:
+            image.reshape(3,75,75)[2][0][0] = np.mean([image.reshape(3,75,75)[0][0][0],image.reshape(3,75,75)[1][0][0]])
         X_train_final = np.concatenate([X_train_final,X_train_temp])
         X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
         y_train_final = np.concatenate([y_train_final, y_train_temp])
     
     return X_train_final, X_angle_train_final, y_train_final
+
+
+def self_generator(features, features_angle, labels, batch_size):
+ # Create empty arrays to contain batch of features and labels#
+ batch_features = np.zeros((batch_size, 75, 75, 3))
+ batch_angles = np.zeros((batch_size,1))
+ batch_labels = np.zeros((batch_size,1))
+ while True:
+   for i in range(batch_size):
+     # choose random index in features
+     index= np.random.choice(len(features),1)
+     batch_features[i] = white_noise_gen(features[index])
+     batch_angles[i] = features_angle[index]
+     batch_labels[i] = labels[index]
+   yield [batch_features, batch_angles], batch_labels
+   
+def white_noise_gen(image):
+    X_train_temp = np.array([band * np.random.normal(1,np.std(band)/np.abs(np.mean(band)),size=(75,75)) for band in image.reshape(3,75,75)]).reshape(75,75,3)
+    X_train_temp.reshape(3,75,75)[2][0][0] = np.mean([X_train_temp.reshape(3,75,75)[0][0][0],X_train_temp.reshape(3,75,75)[1][0][0]])
+    return X_train_temp
         
         
         
@@ -53,11 +75,11 @@ def white_noise(X_train,X_angle_train,y_train, number_syn = 2):
 
 """ Models """
 
-def keras_baselilne():
+def keras_baselilne(input_x = 75, input_y = 75):
     
     bn_model = 0
     p_activation = "elu"
-    input_1 = Input(shape=(75, 75, 3), name="X_1")
+    input_1 = Input(shape=(input_x, input_y, 3), name="X_1")
     input_2 = Input(shape=[1], name="angle")
     
     img_1 = Conv2D(16,3,3, activation=p_activation) (input_1)
@@ -96,13 +118,13 @@ def keras_baselilne():
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
-def resnet():
+def resnet(input_x = 75, input_y = 75):
     
     
     kernel_size = (5,5)
     bn_model = 0
     p_activation = "elu"
-    input_1 = Input(shape=(75, 75, 3), name="X_1")
+    input_1 = Input(shape=(input_x, input_y, 3), name="X_1")
     
     ## input CNN
     input_CNN  = BatchNormalization(momentum = 0.99)(input_1 )
