@@ -6,7 +6,7 @@ from keras.layers import GlobalMaxPooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.merge import Concatenate
 from keras.models import Model
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
 from keras.callbacks import ModelCheckpoint, Callback, EarlyStopping
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,6 +38,24 @@ def white_noise(X_train,X_angle_train,y_train, number_syn = 2):
         X_angle_train_temp = X_angle_train.copy()
         y_train_temp = y_train.copy()
         X_train_temp = [np.array([band * np.random.normal(1,np.std(band)/np.abs(np.mean(band)),size=(75,75)) for band in image.reshape(3,75,75)]).reshape(75,75,3) for image in  X_train_temp]
+        for image in X_train_temp:
+            image.reshape(3,75,75)[2][0][0] = np.mean([image.reshape(3,75,75)[0][0][0],image.reshape(3,75,75)[1][0][0]])
+        X_train_final = np.concatenate([X_train_final,X_train_temp])
+        X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
+        y_train_final = np.concatenate([y_train_final, y_train_temp])
+    
+    return X_train_final, X_angle_train_final, y_train_final
+
+def adding_noise(X_train,X_angle_train,y_train, mean, std, number_syn = 2):
+    
+    X_train_final = X_train.copy()
+    X_angle_train_final = X_angle_train.copy()
+    y_train_final = y_train.copy()
+    for syn in range(1,number_syn):
+        X_train_temp =  X_train.copy()
+        X_angle_train_temp = X_angle_train.copy()
+        y_train_temp = y_train.copy()
+        X_train_temp = [np.array([(band + np.random.normal(mean,std/2,size=(75,75)))/2 for band in image.reshape(3,75,75)]).reshape(75,75,3) for image in  X_train_temp]
         for image in X_train_temp:
             image.reshape(3,75,75)[2][0][0] = np.mean([image.reshape(3,75,75)[0][0][0],image.reshape(3,75,75)[1][0][0]])
         X_train_final = np.concatenate([X_train_final,X_train_temp])
