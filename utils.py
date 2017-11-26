@@ -65,7 +65,28 @@ def adding_noise(X_train,X_angle_train,y_train, mean, std, number_syn = 2):
     return X_train_final, X_angle_train_final, y_train_final
 
 
-def self_generator(features, features_angle, labels, batch_size):
+def black_box(X_train,X_angle_train,y_train, number_syn = 2, box_size = 5):
+    
+    X_train_final = X_train.copy()
+    X_angle_train_final = X_angle_train.copy()
+    y_train_final = y_train.copy()
+    for syn in range(1,number_syn):
+        X_train_temp =  []
+        X_angle_train_temp = X_angle_train.copy()
+        y_train_temp = y_train.copy()
+        for image in X_train:
+            top_left = np.random.choice(range(75 - box_size), size=2)
+            box = np.zeros((75,75))
+            box[top_left[0]:top_left[0] + box_size,top_left[1]:top_left[1] + box_size] = -99
+            X_train_temp.append((np.array([(band + box)  for band in image.reshape(3,75,75)]).reshape(75,75,3)))
+        X_train_final = np.concatenate([X_train_final,X_train_temp])
+        X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
+        y_train_final = np.concatenate([y_train_final, y_train_temp])
+    
+    return X_train_final, X_angle_train_final, y_train_final
+
+
+def self_generator(features, features_angle, labels, batch_size, method='white_noise_gen', box_size=10):
  # Create empty arrays to contain batch of features and labels#
  batch_features = np.zeros((batch_size, 75, 75, 3))
  batch_angles = np.zeros((batch_size,1))
@@ -74,7 +95,10 @@ def self_generator(features, features_angle, labels, batch_size):
    for i in range(batch_size):
      # choose random index in features
      index= np.random.choice(len(features),1)
-     batch_features[i] = white_noise_gen(features[index])
+     if method == 'white_noise_gen':
+         batch_features[i] = white_noise_gen(features[index])
+     if method == 'black_box_gen':
+         batch_features[i] = black_box_gen(features[index],box_size)
      batch_angles[i] = features_angle[index]
      batch_labels[i] = labels[index]
    yield [batch_features, batch_angles], batch_labels
@@ -84,6 +108,12 @@ def white_noise_gen(image):
     X_train_temp.reshape(3,75,75)[2][0][0] = np.mean([X_train_temp.reshape(3,75,75)[0][0][0],X_train_temp.reshape(3,75,75)[1][0][0]])
     return X_train_temp
         
+def black_box_gen(image,box_size):
+    top_left = np.random.choice(range(75 - box_size), size=2)
+    box = np.zeros((75,75))
+    box[top_left[0]:top_left[0] + box_size,top_left[1]:top_left[1] + box_size] = -99
+    return np.array([(band + box)  for band in image.reshape(3,75,75)]).reshape(75,75,3)
+    
         
         
         
