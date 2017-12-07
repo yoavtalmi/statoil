@@ -46,6 +46,28 @@ def white_noise(X_train,X_angle_train,y_train, number_syn = 2):
     
     return X_train_final, X_angle_train_final, y_train_final
 
+def flip(X_train,X_angle_train,y_train, number_syn = 2):
+    
+    X_train_final = X_train.copy()
+    X_angle_train_final = X_angle_train.copy()
+    y_train_final = y_train.copy()
+    
+    
+    fun_dict = {'fliplr' : [np.fliplr], 'flipud' : [np.flipud], 'both' : [np.fliplr,np.flipud]}
+    for key in fun_dict.keys():
+        X_train_temp =  X_train.copy()
+        X_angle_train_temp =  X_angle_train.copy()
+        y_train_temp =  y_train.copy()
+        for fun in fun_dict[key]:
+            X_train_temp = [np.array([fun(band) for band in image_1.reshape(3,75,75)]).reshape(75,75,3) for image_1 in  X_train_temp]
+        X_train_final = np.concatenate([X_train_final,X_train_temp])
+        X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
+        y_train_final = np.concatenate([y_train_final, y_train_temp])
+    
+    return X_train_final, X_angle_train_final, y_train_final
+         
+
+
 def adding_noise(X_train,X_angle_train,y_train, mean, std, number_syn = 2):
     
     X_train_final = X_train.copy()
@@ -75,9 +97,13 @@ def black_box(X_train,X_angle_train,y_train, number_syn = 2, box_size = 5):
         X_angle_train_temp = X_angle_train.copy()
         y_train_temp = y_train.copy()
         for image in X_train:
-            top_left = np.random.choice(range(75 - box_size), size=2)
             box = np.zeros((75,75))
-            box[top_left[0]:top_left[0] + box_size,top_left[1]:top_left[1] + box_size] = -99
+            num_box = np.random.choice(range(1,2))            
+            for i in range(num_box):
+                box_size_temp = np.random.choice(range(10,11),size=2)
+                top_left = np.random.choice(range(75 - box_size_temp[0]))
+                top_left_2 = np.random.choice(range(75 - box_size_temp[1]))
+                box[top_left:top_left +  box_size_temp[0],top_left_2:top_left_2 + box_size_temp[1]] = -99
             X_train_temp.append((np.array([(band + box)  for band in image.reshape(3,75,75)]).reshape(75,75,3)))
         X_train_final = np.concatenate([X_train_final,X_train_temp])
         X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
@@ -109,16 +135,17 @@ def white_noise_gen(image):
     return X_train_temp
         
 def black_box_gen(image,box_size):
-    top_left = np.random.choice(range(75 - box_size), size=2)
+    num_box = np.random.choice(range(3),size=1)
     box = np.zeros((75,75))
-    box[top_left[0]:top_left[0] + box_size,top_left[1]:top_left[1] + box_size] = -99
+    for num in range(num_box):
+        box_size_temp = np.random.choice(range(8,11),size=2)
+        top_left = np.random.choice(range(75 - box_size_temp[0]))
+        top_left_2 = np.random.choice(range(75 - box_size_temp[1]))
+        box[top_left:top_left +  box_size_temp[0],top_left_2:top_left_2 + box_size_temp[1]] = -99
     return np.array([(band + box)  for band in image.reshape(3,75,75)]).reshape(75,75,3)
     
+    
         
-        
-        
-        
-            
 
 
 """ Models """
