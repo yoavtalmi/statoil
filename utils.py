@@ -111,6 +111,30 @@ def black_box(X_train,X_angle_train,y_train, number_syn = 2, box_size = 5):
     
     return X_train_final, X_angle_train_final, y_train_final
 
+def noise_box(X_train,X_angle_train,y_train, number_syn = 2, box_size = 5):
+    
+    X_train_final = X_train.copy()
+    X_angle_train_final = X_angle_train.copy()
+    y_train_final = y_train.copy()
+    for syn in range(1,number_syn):
+        X_train_temp =  []
+        X_angle_train_temp = X_angle_train.copy()
+        y_train_temp = y_train.copy()
+        for image in X_train:
+            box = np.ones((75,75))
+            num_box = np.random.choice(range(1,2))            
+            for i in range(num_box):
+                box_size_temp = np.random.choice(range(10,11),size=2)
+                top_left = np.random.choice(range(75 - box_size_temp[0]))
+                top_left_2 = np.random.choice(range(75 - box_size_temp[1]))
+                box[top_left:top_left +  box_size_temp[0],top_left_2:top_left_2 + box_size_temp[1]] = np.random.normal(1,np.std(image),size=(10,10))
+            X_train_temp.append((np.array([(band * box)  for band in image.reshape(3,75,75)]).reshape(75,75,3)))
+        X_train_final = np.concatenate([X_train_final,X_train_temp])
+        X_angle_train_final = np.concatenate([X_angle_train_final, X_angle_train_temp])
+        y_train_final = np.concatenate([y_train_final, y_train_temp])
+    
+    return X_train_final, X_angle_train_final, y_train_final
+
 
 def self_generator(features, features_angle, labels, batch_size, method='white_noise_gen', box_size=10):
  # Create empty arrays to contain batch of features and labels#
@@ -187,6 +211,63 @@ def keras_baselilne(input_x = 75, input_y = 75):
     dense_ayer = Dropout(0.5) (BatchNormalization(momentum=bn_model) ( Dense(256, activation=p_activation)(img_concat) ))
     dense_ayer = Dropout(0.5) (BatchNormalization(momentum=bn_model) ( Dense(64, activation=p_activation)(dense_ayer) ))
     output = Dense(1, activation="sigmoid")(dense_ayer)
+    
+    model = Model([input_1,input_2],  output)
+    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+    return model
+
+
+def keras_baselilne_batch(input_x = 75, input_y = 75):
+    
+    bn_model = 0
+    p_activation = "elu"
+    input_1 = Input(shape=(input_x, input_y, 3), name="X_1")
+    input_2 = Input(shape=[1], name="angle")
+    
+    img_1 = BatchNormalization(momentum = 0.99) (input_1)
+    img_1 = Conv2D(16,3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = Conv2D(16,3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = MaxPooling2D((2,2)) (img_1)
+    img_1 = Dropout(0.2)(img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = Conv2D(32, 3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = Conv2D(32, 3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = MaxPooling2D((2,2)) (img_1)
+    img_1 = Dropout(0.2)(img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = Conv2D(64,3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = Conv2D(64,3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = MaxPooling2D((2,2)) (img_1)
+    img_1 = Dropout(0.2)(img_1)
+    img_1 = Conv2D(128, 3,3, activation=p_activation) (img_1)
+    img_1 = BatchNormalization(momentum = 0.99) (img_1)
+    img_1 = MaxPooling2D((2,2)) (img_1)
+    img_1 = Dropout(0.2)(img_1)
+    img_1 = GlobalMaxPooling2D() (img_1)
+    
+    img_2 = Conv2D(128, 3,3, activation=p_activation) ((BatchNormalization(momentum=bn_model))(input_1))
+    img_2 = MaxPooling2D((2,2)) (img_2)
+    img_2 = Dropout(0.2)(img_2)
+    img_2 = GlobalMaxPooling2D() (img_2)
+    
+    img_3 = BatchNormalization(momentum=bn_model)(input_2)
+    
+    img_concat =  (Concatenate()([img_1, img_2, img_3]))
+    
+    dense_ayer = Dropout(0.5) (BatchNormalization(momentum=bn_model) ( Dense(256, activation=p_activation)(img_concat) ))
+    dense_ayer = Dropout(0.5) (BatchNormalization(momentum=bn_model) ( Dense(64, activation=p_activation)(dense_ayer) ))
+    output = Dense(1, activation="sigmoid")(dense_ayer)
+    
+    model = Model([input_1,input_2],  output)
+    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     
     model = Model([input_1,input_2],  output)
     optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
